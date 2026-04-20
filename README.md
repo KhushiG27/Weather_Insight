@@ -2,8 +2,6 @@
 
 A clean, responsive weather application built with vanilla HTML, CSS, and JavaScript. Features a glassmorphism UI, real-time weather data, 5-day forecast, voice search, and more.
 
-![Weather App Preview](images/preview.png)
-
 ---
 
 ## ✨ Features
@@ -21,18 +19,13 @@ A clean, responsive weather application built with vanilla HTML, CSS, and JavaSc
 
 ---
 
-## 🖼️ Preview
-
-> Add a screenshot of the app to `images/preview.png` to display it here.
-
----
 
 ## 🚀 Getting Started
 
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/your-username/PRODIGY_WD_05.git
+git clone https://github.com/KhushiG27/PRODIGY_WD_05.git
 cd PRODIGY_WD_05
 ```
 
@@ -53,8 +46,6 @@ const apiKey = "YOUR_API_KEY_HERE";
 ### 4. Open the app
 
 Just open `index.html` in your browser — no build step or server required.
-
-> **Note:** Voice search requires a browser that supports the Web Speech API (Chrome, Edge, Safari). It also requires the page to be served over HTTPS or `localhost` for microphone access.
 
 ---
 
@@ -78,18 +69,20 @@ Just open `index.html` in your browser — no build step or server required.
 PRODIGY_WD_05/
 ├── index.html        # Main app — markup + all JavaScript
 ├── style.css         # All styles + responsive breakpoints
-├── clear.png         # Weather condition icons
-├── clouds.png
-├── drizzle.png
-├── humidity.png
-├── location.png
-├── mist.png
-├── rain.png
-├── search.png
-├── snow.png
-├── wind.png
+├── .gitignore
+├── LICENSE
+├── README.md
 └── images/
-    └── preview.png   # (add your screenshot here)
+    ├── clear.png
+    ├── clouds.png
+    ├── drizzle.png
+    ├── humidity.png
+    ├── location.png
+    ├── mist.png
+    ├── rain.png
+    ├── search.png
+    ├── snow.png
+    └── wind.png
 ```
 
 ---
@@ -104,14 +97,6 @@ PRODIGY_WD_05/
 | `/data/2.5/forecast?lat={lat}&lon={lon}` | 5-day forecast by coordinates |
 
 All requests use `units=metric` by default. The °F conversion is done client-side.
-
----
-
-## ⚠️ Important Notes
-
-- **API Key Security:** This project is a front-end only demo. The API key is visible in the source code. For a production app, proxy API calls through a backend server to keep the key private.
-- **Voice Search:** Only available in browsers that support `window.SpeechRecognition` or `window.webkitSpeechRecognition`. The mic button is automatically hidden if unsupported.
-- **Free API Tier:** The OpenWeatherMap free plan allows 60 calls/minute and 1,000,000 calls/month, which is more than enough for personal use.
 
 ---
 
