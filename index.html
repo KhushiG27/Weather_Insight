@@ -5,89 +5,480 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Weather App</title>
     <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="card">
+
+        <!-- Search -->
         <div class="search">
-            <input type="text" placeholder="enter city name" spellcheck="false">
-            <button><img src="images/search (1).png" alt=""></button>
+            <img src="images/search.png" class="search-icon" alt="search">
+            <input type="text" placeholder="Search City" spellcheck="false" autocomplete="off">
+            <button id="voiceBtn" title="Voice search" aria-label="Voice search">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/>
+                    <path d="M5 10a7 7 0 0 0 14 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="9" y1="21" x2="15" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </button>
+            <button id="locationBtn" title="Use my location" aria-label="Use my location">
+                <img src="images/location.png" alt="location">
+            </button>
         </div>
-        <div class="error">
-            <p>Invalid city name</p>
-        </div>
-        <div class="weather">
-            <img src="images/rain.png" class="weather-icon">
-            <h1 class="temp">34°C</h1>
-            <h2 class="city">New York</h2>
-            <div class="details">
-                <div class="col">
-                    <img src="images/humidity.png">
-                    <div>
-                    <p class="humidity">50%</p>
-                    <p>Humidity</p>
-                    </div>
-                </div> 
-                <div class="col">
-                    <img src="images/wind.png">
-                    <div>
-                    <p class="wind">15 km/h</p>
-                    <p>Wind Speed</p>
-                    </div>
-                </div> 
+
+        <!-- Recent Searches -->
+        <div class="recent-searches" id="recentSearches">
+            <div class="recent-header">
+                <span>Recent</span>
+                <button id="clearRecent">Clear</button>
             </div>
+            <ul id="recentList"></ul>
+        </div>
+
+        <!-- Loader -->
+        <div class="loader" id="loader"></div>
+
+        <!-- Error -->
+        <div class="error" id="errorMsg">
+            <span class="error-icon">⚠</span>
+            <span class="error-text" id="errorText">Invalid city name</span>
+        </div>
+
+        <!-- Weather Content -->
+        <div class="weather" id="weatherContent">
+
+            <!-- City + Date row -->
+            <div class="city-row">
+                <div class="city-left">
+                    <img src="images/location.png" class="pin-icon" alt="">
+                    <span class="city">—</span>
+                </div>
+                <span class="date" id="currentDate">—</span>
+            </div>
+
+            <!-- Main weather: icon left, temp+condition right -->
+            <div class="main-weather">
+                <img src="images/clouds.png" class="weather-icon" alt="weather icon">
+                <div class="temp-block">
+                    <h1 class="temp">—</h1>
+                    <p class="condition">—</p>
+                    <!-- Unit Toggle -->
+                    <div class="toggle-container">
+                        <span class="toggle-label active-unit" id="labelC">°C</span>
+                        <label class="toggle-switch" aria-label="Toggle temperature unit">
+                            <input type="checkbox" id="unitToggle">
+                            <span class="toggle-thumb"></span>
+                        </label>
+                        <span class="toggle-label" id="labelF">°F</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Details row -->
+            <div class="details">
+                <div class="detail-item">
+                    <img src="images/humidity.png" alt="humidity">
+                    <div>
+                        <p class="detail-label">Humidity</p>
+                        <p class="humidity detail-value">—</p>
+                    </div>
+                </div>
+                <div class="detail-divider"></div>
+                <div class="detail-item">
+                    <img src="images/wind.png" alt="wind">
+                    <div>
+                        <p class="detail-label">Wind Speed</p>
+                        <p class="wind detail-value">—</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5-day Forecast -->
+            <div class="forecast-label">5-Day Forecast</div>
+            <div class="forecast" id="forecastRow"></div>
+
         </div>
     </div>
-   
+
 <script>
+    const apiKey      = "f0d4705f2ff161e9df26cbe47a8731b6";
+    const apiUrl      = "https://api.openweathermap.org/data/2.5/weather?units=metric&q=";
 
-    const apiKey = "f0d4705f2ff161e9df26cbe47a8731b6";
-    const apiUrl = "https://api.openweathermap.org/data/2.5/weather?&units=metric&q=";
-
-    const searchBox = document.querySelector(".search input");
-    const searchBtn = document.querySelector(".search button");
+    const searchBox   = document.querySelector(".search input");
+    const searchEl    = document.querySelector(".search");
     const weatherIcon = document.querySelector(".weather-icon");
 
-async function checkWeather(city){
-    const response = await fetch(apiUrl + city + `&appid=${apiKey}`);
+    // ── Temperature Toggle ──────────────────────────────────────
+    let isCelsius = true;
+    let lastTempC = null;
 
-    if(response.status == 404){
-        document.querySelector(".error").style.display = "block";
-        document.querySelector(".weather").style.display = "none";
-    }
-    else{
-        var data = await response.json();
+    document.getElementById("unitToggle").addEventListener("change", (e) => {
+        isCelsius = !e.target.checked;
+        if (lastTempC !== null) displayTemp(lastTempC);
+        document.getElementById("labelC").classList.toggle("active-unit",  isCelsius);
+        document.getElementById("labelF").classList.toggle("active-unit", !isCelsius);
+        // re-render forecast temps
+        document.querySelectorAll(".forecast-card").forEach(card => {
+            const tempC = parseFloat(card.dataset.tempC);
+            card.querySelector(".fc-temp").textContent =
+                isCelsius ? Math.round(tempC) + "°C"
+                          : Math.round(tempC * 9/5 + 32) + "°F";
+        });
+    });
 
-    document.querySelector(".city").innerHTML = data.name;
-    document.querySelector(".temp").innerHTML = Math.round(data.main.temp) + "°C";
-    document.querySelector(".humidity").innerHTML = data.main.humidity + "%";
-    document.querySelector(".wind").innerHTML = data.wind.speed + "Km/h";
-        
-    if(data.weather[0].main == "Clouds"){
-        weatherIcon.src = "images/clouds.png";
-    }
-    else if(data.weather[0].main == "Clear"){
-        weatherIcon.src = "images/clear.png";
-    }
-    else if(data.weather[0].main == "Rain"){
-        weatherIcon.src = "images/rain.png";
-    }
-    else if(data.weather[0].main == "Drizzle"){
-        weatherIcon.src = "images/drizzle.png";
-    }
-    else if(data.weather[0].main == "Mist"){
-        weatherIcon.src = "images/mist.png";
+    function displayTemp(tempC) {
+        document.querySelector(".temp").textContent =
+            isCelsius ? Math.round(tempC) + "°C"
+                      : Math.round(tempC * 9/5 + 32) + "°F";
     }
 
-    document.querySelector(".weather").style.display = "block";
-    document.querySelector(".error").style.display = "none";
+    // ── Date helper ─────────────────────────────────────────────
+    function formatDate(dateObj) {
+        return dateObj.toLocaleDateString("en-US", { weekday:"short", day:"2-digit", month:"short" });
     }
-      
-}
 
-searchBtn.addEventListener("click", ()=>{
-    checkWeather(searchBox.value);
-})
+    function setTodayDate() {
+        document.getElementById("currentDate").textContent = formatDate(new Date());
+    }
 
+    // ── Weather icon map ─────────────────────────────────────────
+    const iconMap = {
+        Clouds:  "images/clouds.png",
+        Clear:   "images/clear.png",
+        Rain:    "images/rain.png",
+        Drizzle: "images/drizzle.png",
+        Mist:    "images/mist.png",
+        Snow:    "images/snow.png"
+    };
+
+    function getIcon(condition) {
+        return iconMap[condition] || "images/clouds.png";
+    }
+
+    // ── Error handling ───────────────────────────────────────────
+    let errorTimer = null;
+
+    function showError(message) {
+        const el   = document.getElementById("errorMsg");
+        const text = document.getElementById("errorText");
+        text.textContent = message;
+
+        // clear any previous auto-dismiss
+        if (errorTimer) clearTimeout(errorTimer);
+
+        el.classList.remove("error-visible");
+        // force reflow so re-adding the class triggers transition
+        void el.offsetWidth;
+        el.classList.add("error-visible");
+
+        // auto-dismiss after 4s
+        errorTimer = setTimeout(() => hideError(), 4000);
+    }
+
+    function hideError() {
+        const el = document.getElementById("errorMsg");
+        el.classList.remove("error-visible");
+    }
+
+    function shakeSearch() {
+        searchEl.classList.remove("shake");
+        void searchEl.offsetWidth;
+        searchEl.classList.add("shake");
+        searchEl.addEventListener("animationend", () => searchEl.classList.remove("shake"), { once: true });
+    }
+
+    // ── Recent Searches ──────────────────────────────────────────
+    const STORAGE_KEY = "weatherRecentSearches";
+    const MAX_RECENT  = 5;
+
+    function getRecentSearches() {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    }
+
+    function saveRecentSearch(city) {
+        let recents = getRecentSearches().filter(c => c.toLowerCase() !== city.toLowerCase());
+        recents.unshift(city);
+        if (recents.length > MAX_RECENT) recents = recents.slice(0, MAX_RECENT);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(recents));
+        renderRecentSearches();
+    }
+
+    function renderRecentSearches() {
+        const recents   = getRecentSearches();
+        const container = document.getElementById("recentSearches");
+        const list      = document.getElementById("recentList");
+        if (recents.length === 0) {
+            container.classList.remove("recent-visible");
+            return;
+        }
+        list.innerHTML = "";
+        recents.forEach(city => {
+            const li = document.createElement("li");
+            li.textContent = city;
+            li.addEventListener("click", () => { checkWeather(city); searchBox.value = ""; });
+            list.appendChild(li);
+        });
+        container.classList.add("recent-visible");
+    }
+
+    document.getElementById("clearRecent").addEventListener("click", () => {
+        localStorage.removeItem(STORAGE_KEY);
+        renderRecentSearches();
+    });
+
+    searchBox.addEventListener("focus", renderRecentSearches);
+
+    document.addEventListener("click", (e) => {
+        if (!e.target.closest(".search") && !e.target.closest(".recent-searches"))
+            document.getElementById("recentSearches").classList.remove("recent-visible");
+    });
+
+    // ── Loader ───────────────────────────────────────────────────
+    function showLoader() {
+        const loader  = document.getElementById("loader");
+        const content = document.getElementById("weatherContent");
+        hideError();
+        loader.classList.add("loader-visible");
+        content.classList.remove("weather-visible");
+    }
+
+    function hideLoader() {
+        document.getElementById("loader").classList.remove("loader-visible");
+    }
+
+    // ── Forecast ─────────────────────────────────────────────────
+    async function fetchForecast(query) {
+        try {
+            const res  = await fetch(`https://api.openweathermap.org/data/2.5/forecast?units=metric${query}&appid=${apiKey}`);
+            if (!res.ok) return;
+            const data = await res.json();
+            renderForecast(data);
+        } catch (_) {
+            // forecast failure is non-critical, silently skip
+        }
+    }
+
+    function renderForecast(data) {
+        const row = document.getElementById("forecastRow");
+        row.innerHTML = "";
+        const today = new Date().getDate();
+        const seen  = new Set();
+        const days  = [];
+
+        // prefer noon slots
+        for (const item of data.list) {
+            const d      = new Date(item.dt * 1000);
+            const dayNum = d.getDate();
+            if (dayNum === today) continue;
+            if (seen.has(dayNum)) continue;
+            if (d.getHours() >= 11 && d.getHours() <= 14) {
+                seen.add(dayNum);
+                days.push(item);
+            }
+            if (days.length === 5) break;
+        }
+
+        // fallback: first entry per day
+        if (days.length < 5) {
+            seen.clear(); days.length = 0;
+            for (const item of data.list) {
+                const d      = new Date(item.dt * 1000);
+                const dayNum = d.getDate();
+                if (dayNum === today) continue;
+                if (seen.has(dayNum)) continue;
+                seen.add(dayNum);
+                days.push(item);
+                if (days.length === 5) break;
+            }
+        }
+
+        days.forEach((item, i) => {
+            const d     = new Date(item.dt * 1000);
+            const label = d.toLocaleDateString("en-US", { month:"short", day:"2-digit" });
+            const tempC = item.main.temp;
+            const cond  = item.weather[0].main;
+
+            const card = document.createElement("div");
+            card.className = "forecast-card";
+            card.dataset.tempC = tempC;
+            card.style.animationDelay = `${i * 0.07}s`;
+            card.innerHTML = `
+                <p class="fc-date">${label}</p>
+                <img src="${getIcon(cond)}" alt="${cond}">
+                <p class="fc-temp">${isCelsius ? Math.round(tempC) + "°C" : Math.round(tempC * 9/5 + 32) + "°F"}</p>
+            `;
+            row.appendChild(card);
+        });
+    }
+
+    // ── Update UI ────────────────────────────────────────────────
+    function updateUI(data) {
+        const content = document.getElementById("weatherContent");
+
+        // fade out → update → fade in
+        content.classList.remove("weather-visible");
+
+        setTimeout(() => {
+            document.querySelector(".city").textContent      = data.name;
+            document.querySelector(".condition").textContent = data.weather[0].description
+                .split(" ").map(w => w[0].toUpperCase() + w.slice(1)).join(" ");
+            document.querySelector(".humidity").textContent  = data.main.humidity + "%";
+            document.querySelector(".wind").textContent      = data.wind.speed + " M/s";
+            lastTempC    = data.main.temp;
+            weatherIcon.src = getIcon(data.weather[0].main);
+            displayTemp(lastTempC);
+            setTodayDate();
+            hideError();
+            content.classList.add("weather-visible");
+        }, 200);
+    }
+
+    // ── Check Weather ────────────────────────────────────────────
+    async function checkWeather(city) {
+        showLoader();
+        try {
+            const res = await fetch(apiUrl + encodeURIComponent(city) + `&appid=${apiKey}`);
+            hideLoader();
+
+            if (res.status === 404) {
+                shakeSearch();
+                showError(`City "${city}" not found. Check the spelling and try again.`);
+                return;
+            }
+            if (!res.ok) {
+                showError(`Server error (${res.status}). Please try again later.`);
+                return;
+            }
+
+            const data = await res.json();
+            saveRecentSearch(data.name);
+            updateUI(data);
+            fetchForecast(`&q=${encodeURIComponent(data.name)}`);
+
+        } catch (err) {
+            hideLoader();
+            shakeSearch();
+            showError("Network error. Check your connection and try again.");
+        }
+    }
+
+    // ── Geolocation ──────────────────────────────────────────────
+    async function getUserLocationWeather() {
+        if (!navigator.geolocation) {
+            showError("Geolocation is not supported by your browser.");
+            return;
+        }
+        showLoader();
+        navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+                try {
+                    const { latitude: lat, longitude: lon } = pos.coords;
+                    const res = await fetch(
+                        `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`
+                    );
+                    hideLoader();
+                    if (!res.ok) { showError("Could not fetch weather for your location."); return; }
+                    const data = await res.json();
+                    saveRecentSearch(data.name);
+                    updateUI(data);
+                    fetchForecast(`&lat=${lat}&lon=${lon}`);
+                    searchBox.value = "";
+                } catch (_) {
+                    hideLoader();
+                    showError("Network error. Check your connection and try again.");
+                }
+            },
+            (err) => {
+                hideLoader();
+                const msgs = {
+                    1: "Location access denied. Please allow it in your browser settings.",
+                    2: "Location unavailable. Try searching by city name.",
+                    3: "Location request timed out. Try again."
+                };
+                showError(msgs[err.code] || "Unable to retrieve your location.");
+            },
+            { timeout: 10000 }
+        );
+    }
+
+    // ── Event Listeners ──────────────────────────────────────────
+    searchBox.addEventListener("keypress", (e) => {
+        if (e.key !== "Enter") return;
+        const city = searchBox.value.trim();
+        if (!city) { shakeSearch(); showError("Please enter a city name."); return; }
+        checkWeather(city);
+        searchBox.value = "";
+    });
+
+    document.querySelector(".search-icon").addEventListener("click", () => {
+        const city = searchBox.value.trim();
+        if (!city) { shakeSearch(); showError("Please enter a city name."); return; }
+        checkWeather(city);
+        searchBox.value = "";
+    });
+
+    document.getElementById("locationBtn").addEventListener("click", getUserLocationWeather);
+
+    // ── Voice Search ─────────────────────────────────────────────
+    const voiceBtn = document.getElementById("voiceBtn");
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+        voiceBtn.style.display = "none"; // hide if unsupported
+    } else {
+        const recognition = new SpeechRecognition();
+        recognition.lang = "en-US";
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        let isListening = false;
+
+        voiceBtn.addEventListener("click", () => {
+            if (isListening) {
+                recognition.stop();
+                return;
+            }
+            recognition.start();
+        });
+
+        recognition.addEventListener("start", () => {
+            isListening = true;
+            voiceBtn.classList.add("listening");
+            searchBox.placeholder = "Listening...";
+        });
+
+        recognition.addEventListener("result", (e) => {
+            const city = e.results[0][0].transcript.trim();
+            searchBox.value = city;
+            searchBox.placeholder = "Search City";
+            checkWeather(city);
+            searchBox.value = "";
+        });
+
+        recognition.addEventListener("end", () => {
+            isListening = false;
+            voiceBtn.classList.remove("listening");
+            searchBox.placeholder = "Search City";
+        });
+
+        recognition.addEventListener("error", (e) => {
+            isListening = false;
+            voiceBtn.classList.remove("listening");
+            searchBox.placeholder = "Search City";
+            const msgs = {
+                "not-allowed":  "Microphone access denied. Allow it in browser settings.",
+                "no-speech":    "No speech detected. Please try again.",
+                "network":      "Network error during voice recognition.",
+                "aborted":      ""
+            };
+            const msg = msgs[e.error];
+            if (msg) showError(msg);
+        });
+    }
+
+    // ── Init ─────────────────────────────────────────────────────
+    renderRecentSearches();
 </script>
 </body>
 </html>

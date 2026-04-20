@@ -1,0 +1,27 @@
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor directories
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment / secrets (if you ever move to a build setup)
+.env
+.env.local
+.env.*.local
+
+# Dependency directories (if a build tool is added later)
+node_modules/
+dist/
+build/
