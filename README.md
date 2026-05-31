@@ -2,7 +2,7 @@
 
 A weather app I built using React and Tailwind CSS. It pulls real-time data from the OpenWeatherMap API and shows current conditions, a 5-day forecast, air quality, and more — all wrapped in a glassmorphism UI with a dynamic background that changes based on the weather.
 
-🔗 **[Live Demo](https://weather-insight-seven.vercel.app/)** &nbsp;|&nbsp; ⭐ Star this repo if you found it useful
+🔗 **[Live Demo](https://weather-insight-cyan.vercel.app/)** &nbsp;|&nbsp; ⭐ Star this repo if you found it useful
 
 ---
 
